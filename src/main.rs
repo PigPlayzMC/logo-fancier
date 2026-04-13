@@ -8,6 +8,9 @@ fn main() {
    let args: Vec<String> = env::args().collect();
    let mut file_path: String = Default::default();
 
+   // Char arrays (If ascii artifacts are present, this is probably the root cause)
+   let solid_chars: Vec<char>  = vec!['M', 'o'];
+
    // Check for valid input
    if args.len() == 1 {
       help_menu();
@@ -26,12 +29,34 @@ fn main() {
    let ascii_art = match fs::read_to_string(&file_path) {
        Ok(vec) => vec,
        Err(e) => {
-       	      eprintln!("Error opening {}: {}", file_path,  e);
+       	      eprintln!("Fatal - Error opening {}: {}", file_path,  e);
 	      exit(1);
        },
    };
 
    println!("{}", ascii_art);
+
+   let mut error_occurred: bool = false;
+   let mut block_art: String = "".to_string();
+
+   for char in ascii_art.chars() {
+       if char == ' ' {
+       	  block_art += " ";
+       } else if solid_chars.contains(&char) {
+       	  block_art += "█";
+       } else {
+       	 error_occurred = true;
+	 block_art += &char.to_string(); // This is not meant to happen, but might result in a more salvagable file
+	 eprintln!("Nonfatal - unexpected char encountered...");
+       };
+   };
+
+   if error_occurred {
+      eprintln!("Nonfatal - an error occured during processing, the result file may be inaccurate.");
+   };
+   println!("Proccessing complete! Saving not implemented...");
+
+   println!("{}", block_art);
 }
 
 fn help_menu() {
@@ -41,7 +66,7 @@ fn help_menu() {
 Logo-Fancier: Make logos fancier...
 
 To use: Run 'logo-fancier (path to your fetch program's ascii art that you wish to alter)
-Alternative use: Run 'logo-fancier -h', logo-fancier will attempt to guess, based on your operating system and installed fetch program(s) which ascii art to use.
+Alternative use: Run 'logo-fancier -g', logo-fancier will attempt to guess, based on your operating system and installed fetch program(s) which ascii art to use.
 ");
 
    exit(0);
