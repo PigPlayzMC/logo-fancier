@@ -9,7 +9,9 @@ fn main() {
    let mut file_path: String = Default::default();
 
    // Char arrays (If ascii artifacts are present, this is probably the root cause)
-   let solid_chars: Vec<char>  = vec!['M', 'o'];
+   let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+'];
+   let half_right_chars: Vec<char> = vec!['/'];
+   let disregarded_chars: Vec<char> = vec![' ', '`', '.'];
 
    // Check for valid input
    if args.len() == 1 {
@@ -37,24 +39,60 @@ fn main() {
    println!("{}", ascii_art);
 
    let mut error_occurred: bool = false;
+   let mut error_count: u32 = 0;
    let mut block_art: String = "".to_string();
+   let mut skip_next_char: bool = false;
+   let mut index = 0;
 
    for char in ascii_art.chars() {
-       if char == ' ' {
-       	  block_art += " ";
-       } else if solid_chars.contains(&char) {
-       	  block_art += "█";
+       if !skip_next_char {
+	   if char == ' ' {
+	      block_art += " ";
+	   } else if char == '\n' { // This is a new line
+	     block_art += "\n";
+	   } else if char == '$' {
+	      // This is something to do with colour maybe?
+	      skip_next_char = true;
+	   } else if solid_chars.contains(&char) {
+	      block_art += "█";
+	   } else if half_right_chars.contains(&char) {
+	     /* NOTE: This breaks... Check must be done to ensure the correct
+	     element is chosen (Could be right or left)*/
+
+	     let prior_char: char;
+	     let next_char: char;
+
+	     // Safety checks first
+	     if index == 0 {
+	     	prior_char = ' ';
+	     } else {
+	       	prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	     };
+
+	     if index == ascii_art.len() - 1 {
+	     	next_char = ' ';
+	     } else {
+	       next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	     };
+
+	     block_art += &pick_best_half_char(prior_char, next_char, &disregarded_chars);
+	   } else {
+	     error_occurred = true;
+	     error_count += 1;
+	     block_art += &char.to_string(); // This is not meant to happen, but might result in a more salvagable file
+	     eprintln!("Nonfatal - unexpected char encountered...");
+	   };
        } else {
-       	 error_occurred = true;
-	 block_art += &char.to_string(); // This is not meant to happen, but might result in a more salvagable file
-	 eprintln!("Nonfatal - unexpected char encountered...");
+       	 skip_next_char = false;
        };
+
+       index += 1;
    };
 
    if error_occurred {
-      eprintln!("Nonfatal - an error occured during processing, the result file may be inaccurate.");
+      eprintln!("Nonfatal - {} error(s) occured during processing, the result file may be inaccurate.", error_count);
    };
-   println!("Proccessing complete! Saving not implemented...");
+   println!("Processing complete! Saving not implemented...");
 
    println!("{}", block_art);
 }
@@ -70,4 +108,17 @@ Alternative use: Run 'logo-fancier -g', logo-fancier will attempt to guess, base
 ");
 
    exit(0);
+}
+
+fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Vec<char>) -> String {
+   if disregarded_chars.contains(&prior_char) && !disregarded_chars.contains(&next_char) {
+      return "▐".to_string()
+   } else if !disregarded_chars.contains(&prior_char) && disregarded_chars.contains(&next_char) {
+     return "▌".to_string()
+   } else {
+     eprintln!("Progress - Can't guess which half character to use, going left..."); // As good are guess as right
+     return "▌".to_string()
+   };
+
+   unreachable!();
 }
