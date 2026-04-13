@@ -10,13 +10,11 @@ fn main() {
 
    // Char arrays (If ascii artifacts are present, this is probably the root cause)
    let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+'];
-   let half_right_chars: Vec<char> = vec!['/'];
-   let disregarded_chars: Vec<char> = vec![' ', '`', '.'];
+   let half_width_chars: Vec<char> = vec!['/'];
+   let step_chars: Vec<char> = vec![':']; 
+   let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':', '-'];
 
-   // Check for valid input
-   if args.len() == 1 {
-      help_menu();
-   } if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
+   if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
      help_menu();
    } else if args.contains(&"-v".to_string()) || args.contains(&"--version".to_string()) {
      println!("Logo-Fancier version: {}", env!("CARGO_PKG_VERSION"));
@@ -48,16 +46,14 @@ fn main() {
        if !skip_next_char {
 	   if char == ' ' {
 	      block_art += " ";
-	   } else if char == '\n' { // This is a new line
+	   } else if char == '\n' {
 	     block_art += "\n";
 	   } else if char == '$' {
 	      // This is something to do with colour maybe?
 	      skip_next_char = true;
 	   } else if solid_chars.contains(&char) {
 	      block_art += "█";
-	   } else if half_right_chars.contains(&char) {
-	     /* NOTE: This breaks... Check must be done to ensure the correct
-	     element is chosen (Could be right or left)*/
+	   } else if half_width_chars.contains(&char) {
 
 	     let prior_char: char;
 	     let next_char: char;
@@ -121,4 +117,12 @@ fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Ve
    };
 
    unreachable!();
+}
+
+fn pick_best_half_height_char(top_char: char, bottom_char: char) -> String {
+    todo!();
+}
+
+fn pick_relevant_step_char(prior_char: char, next_char: char, half_height_chars: &Vec<char>) -> String {
+   todo!();
 }
