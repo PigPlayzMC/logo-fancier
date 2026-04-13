@@ -23,13 +23,15 @@ fn main() {
    };
 
    // Try to open provided file path
-   let ascii_art = match fs::read(&file_path) {
+   let ascii_art = match fs::read_to_string(&file_path) {
        Ok(vec) => vec,
        Err(e) => {
        	      eprintln!("Error opening {}: {}", file_path,  e);
 	      exit(1);
        },
    };
+
+   println!("{}", ascii_art);
 }
 
 fn help_menu() {
