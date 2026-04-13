@@ -6,6 +6,7 @@ use std::{
 
 fn main() {
    let args: Vec<String> = env::args().collect();
+   let mut file_path: String = Default::default();
 
    // Check for valid input
    if args.len() == 1 {
@@ -15,10 +16,20 @@ fn main() {
    } else if args.contains(&"-v".to_string()) || args.contains(&"--version".to_string()) {
      println!("Logo-Fancier version: {}", env!("CARGO_PKG_VERSION"));
      exit(0);
-   }
+   } else if args.contains(&"-g".to_string()) || args.contains(&"--guess".to_string()) {
+     todo!();
+   } else {
+     file_path = args[1].clone();
+   };
 
    // Try to open provided file path
-   todo!();
+   let ascii_art = match fs::read(&file_path) {
+       Ok(vec) => vec,
+       Err(e) => {
+       	      eprintln!("Error opening {}: {}", file_path,  e);
+	      exit(1);
+       },
+   };
 }
 
 fn help_menu() {
