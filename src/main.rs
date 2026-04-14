@@ -145,21 +145,31 @@ fn main() {
 	       if (combination_half.contains(&prior_char) || combination_half.contains(&next_char)) && run {
 		   // Definitely add a half char, but which one
 
+		   // Manual hack to get around some weird logic error
+		   let mut cont = true;
+		   if prior_char == '`' && high_chars.contains(&char) && next_char == '.' {
+		       println!("Progress: Hacky workaround triggered...");
+		       block_art += "▀";
+		       cont = false;
+		   };
+
 		   // See definitions of low_chars and high_chars
-		   if high_chars.contains(&prior_char) && !bounding_char || high_chars.contains(&next_char) {
-		       block_art += "▀";
-		   } else if low_chars.contains(&prior_char) || low_chars.contains(&next_char) {
-		       block_art += "▄";
-		   } else if high_chars.contains(&char) {
-		       block_art += "▀";
-		   } else if low_chars.contains(&char) {
-		       block_art += "▄";
-		   } else {
-		       // How has this happened???
-		       error_occurred = true;
-		       error_count += 1;
-		       block_art += &char.to_string(); // See after...
-		       eprintln!("Nonfatal - Could not decide which half character to use...");
+		   if cont {
+		       if high_chars.contains(&prior_char) && !bounding_char || high_chars.contains(&next_char) {
+			   block_art += "▀";
+		       } else if low_chars.contains(&prior_char) || low_chars.contains(&next_char) {
+			   block_art += "▄";
+		       } else if high_chars.contains(&char) {
+			   block_art += "▀";
+		       } else if low_chars.contains(&char) {
+			   block_art += "▄";
+		       } else {
+			   // How has this happened???
+			   error_occurred = true;
+			   error_count += 1;
+			   block_art += &char.to_string(); // See after...
+			   eprintln!("Nonfatal - Could not decide which half character to use...");
+		       };
 		   };
 	       } else {
 		   error_occurred = true;
