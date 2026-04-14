@@ -107,10 +107,6 @@ fn main() {
 	       let prior_char: char;
 	       let next_char: char;
 
-	       // Gets funky if run on edge characters so this aims to exclude them...
-	       let prior_prior_char: char;
-	       let next_next_char: char;
-
 	       // Safety checks first (consider modularity)
 	       // Considered: Lazy
 	       if index == 0 {
