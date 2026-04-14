@@ -106,6 +106,10 @@ fn main() {
 	       let prior_char: char;
 	       let next_char: char;
 
+	       // Gets funky if run on edge characters so this aims to exclude them...
+	       let prior_prior_char: char;
+	       let next_next_char: char;
+
 	       // Safety checks first (consider modularity)
 	       // Considered: Lazy
 	       if index == 0 {
@@ -120,12 +124,29 @@ fn main() {
 		   next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
 	       };
 
+	       // Check if the prior_char is a left bounding char
+	       let bounding_char: bool;
+	       if index == 1 {
+		   bounding_char = true;
+	       } else if ascii_art.chars().nth(index - 2).expect("Checked") == ' ' {
+		   bounding_char = true;
+	       } else {
+		   bounding_char = false;
+	       };
+
+	       let run: bool;
+	       if char == '\'' && (prior_char == ' ' || next_char == '\n') {
+		   run = false;
+	       } else {
+		   run = true;
+	       };
+
 	       // Process right here, like a "man" (arch+rust btw)
-	       if combination_half.contains(&prior_char) || combination_half.contains(&next_char) {
+	       if (combination_half.contains(&prior_char) || combination_half.contains(&next_char)) && run {
 		   // Definitely add a half char, but which one
 
 		   // See definitions of low_chars and high_chars
-		   if high_chars.contains(&prior_char) || high_chars.contains(&next_char) {
+		   if high_chars.contains(&prior_char) && !bounding_char || high_chars.contains(&next_char) {
 		       block_art += "▀";
 		   } else if low_chars.contains(&prior_char) || low_chars.contains(&next_char) {
 		       block_art += "▄";
