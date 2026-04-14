@@ -13,11 +13,17 @@ fn main() {
    let mut file_path: String = Default::default();
 
    // Char arrays (If ascii artifacts are present, this is probably the root cause)
-   let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+'];
+   let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+', 'i', 'x', 'k', ';', 'j', 'I'];
     let half_width_chars: Vec<char> = vec!['/', ':'];
     let half_height_chars: Vec<char> = vec!['-']; // This is checked in a second pass as the chosen step char is used...
-   let step_chars: Vec<char> = vec![]; 
-   let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':'];
+   let step_chars: Vec<char> = vec![]; // Archive, reason: Lazy
+    let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':', '\''];
+
+    let combination_half: Vec<char> = vec!['\'', '`', '.', '-', ',']; // Any 2 of these will
+    // be replaced with a half block
+
+    let high_chars: Vec<char> = vec!['\'', '`'];
+    let low_chars: Vec<char> = vec![',', '.']; // Not high_chairs
 
    if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
      help_menu();
@@ -77,7 +83,7 @@ fn main() {
 	       next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
 	     };
 
-	     block_art += &pick_best_half_char(prior_char, next_char, &disregarded_chars);
+	     block_art += &pick_best_half_char(prior_char, next_char, &disregarded_chars, &combination_half);
 	   } else if step_chars.contains(&char) {
 	       let prior_char: char;
 	       let next_char: char;
@@ -96,6 +102,50 @@ fn main() {
 	       };
 
 	       block_art += &pick_best_step_char(prior_char, next_char, &half_height_chars);
+	   } else if combination_half.contains(&char) {
+	       let prior_char: char;
+	       let next_char: char;
+
+	       // Safety checks first (consider modularity)
+	       // Considered: Lazy
+	       if index == 0 {
+	     	   prior_char = ' ';
+	       } else {
+	       	   prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	       };
+
+	       if index == ascii_art.len() - 1 {
+	     	   next_char = ' ';
+	       } else {
+		   next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	       };
+
+	       // Process right here, like a "man" (arch+rust btw)
+	       if combination_half.contains(&prior_char) || combination_half.contains(&next_char) {
+		   // Definitely add a half char, but which one
+
+		   // See definitions of low_chars and high_chars
+		   if high_chars.contains(&prior_char) || high_chars.contains(&next_char) {
+		       block_art += "▀";
+		   } else if low_chars.contains(&prior_char) || low_chars.contains(&next_char) {
+		       block_art += "▄";
+		   } else if high_chars.contains(&char) {
+		       block_art += "▀";
+		   } else if low_chars.contains(&char) {
+		       block_art += "▄";
+		   } else {
+		       // How has this happened???
+		       error_occurred = true;
+		       error_count += 1;
+		       block_art += &char.to_string(); // See after...
+		       eprintln!("Nonfatal - Could not decide which half character to use...");
+		   };
+	       } else {
+		   error_occurred = true;
+		   error_count += 1;
+		   block_art += &char.to_string(); // See after...
+		   eprintln!("Nonfatal - unexpected char encountered...");
+	       };
 	   } else {
 	     error_occurred = true;
 	     error_count += 1;
@@ -130,23 +180,20 @@ Alternative use: Run 'logo-fancier -g', logo-fancier will attempt to guess, base
    exit(0);
 }
 
-fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Vec<char>) -> String {
+fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Vec<char>, combination_halfs: &Vec<char>) -> String {
     let mut new_disregarded_chars: Vec<char> = disregarded_chars.to_vec();
     new_disregarded_chars.push('-');
     
-    if next_char == ':' || prior_char == ':' { // This ends up looking better
+    if next_char == ':' || prior_char == ':' || combination_halfs.contains(&next_char) || combination_halfs.contains(&prior_char) { // This ends up looking better
 	return "█".to_string()
     };
-
 	
    if new_disregarded_chars.contains(&prior_char) && !new_disregarded_chars.contains(&next_char) {
       return "▐".to_string()
    } else if !new_disregarded_chars.contains(&prior_char) && new_disregarded_chars.contains(&next_char) {
      return "▌".to_string()
-   } else {
-       eprintln!("Progress - Can't guess which half character to use, going left..."); // As good are guess as right
-       // NOTE: This is probably a step char and in the future should be processed as such
-     return "▌".to_string()
+   } else { // This looks best imo
+     return "█".to_string()
    };
 }
 
