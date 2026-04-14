@@ -1,3 +1,7 @@
+// Note: Formatting in this file is unreliable as I only installed
+// Rust-mode half way through and Fundamental mode behaved unexpectedly
+// when faced with a rust file
+
 use std::{
     env,
     fs,
@@ -10,9 +14,10 @@ fn main() {
 
    // Char arrays (If ascii artifacts are present, this is probably the root cause)
    let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+'];
-   let half_width_chars: Vec<char> = vec!['/'];
-   let step_chars: Vec<char> = vec![':']; 
-   let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':', '-'];
+    let half_width_chars: Vec<char> = vec!['/', ':'];
+    let half_height_chars: Vec<char> = vec!['-']; // This is checked in a second pass as the chosen step char is used...
+   let step_chars: Vec<char> = vec![]; 
+   let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':'];
 
    if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
      help_menu();
@@ -34,12 +39,13 @@ fn main() {
        },
    };
 
-   println!("{}", ascii_art);
+    println!("{}", ascii_art);
+
+    let mut skip_next_char: bool = false;
 
    let mut error_occurred: bool = false;
    let mut error_count: u32 = 0;
    let mut block_art: String = "".to_string();
-   let mut skip_next_char: bool = false;
    let mut index = 0;
 
    for char in ascii_art.chars() {
@@ -72,6 +78,24 @@ fn main() {
 	     };
 
 	     block_art += &pick_best_half_char(prior_char, next_char, &disregarded_chars);
+	   } else if step_chars.contains(&char) {
+	       let prior_char: char;
+	       let next_char: char;
+
+	       // Safety checks first
+	       if index == 0 {
+	     	   prior_char = ' ';
+	       } else {
+	       	   prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	       };
+
+	       if index == ascii_art.len() - 1 {
+	     	   next_char = ' ';
+	       } else {
+		   next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	       };
+
+	       block_art += &pick_best_step_char(prior_char, next_char, &half_height_chars);
 	   } else {
 	     error_occurred = true;
 	     error_count += 1;
@@ -107,22 +131,38 @@ Alternative use: Run 'logo-fancier -g', logo-fancier will attempt to guess, base
 }
 
 fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Vec<char>) -> String {
-   if disregarded_chars.contains(&prior_char) && !disregarded_chars.contains(&next_char) {
+    let mut new_disregarded_chars: Vec<char> = disregarded_chars.to_vec();
+    new_disregarded_chars.push('-');
+    
+    if next_char == ':' || prior_char == ':' { // This ends up looking better
+	return "█".to_string()
+    };
+
+	
+   if new_disregarded_chars.contains(&prior_char) && !new_disregarded_chars.contains(&next_char) {
       return "▐".to_string()
-   } else if !disregarded_chars.contains(&prior_char) && disregarded_chars.contains(&next_char) {
+   } else if !new_disregarded_chars.contains(&prior_char) && new_disregarded_chars.contains(&next_char) {
      return "▌".to_string()
    } else {
-     eprintln!("Progress - Can't guess which half character to use, going left..."); // As good are guess as right
+       eprintln!("Progress - Can't guess which half character to use, going left..."); // As good are guess as right
+       // NOTE: This is probably a step char and in the future should be processed as such
      return "▌".to_string()
    };
-
-   unreachable!();
 }
 
-fn pick_best_half_height_char(top_char: char, bottom_char: char) -> String {
-    todo!();
-}
-
-fn pick_relevant_step_char(prior_char: char, next_char: char, half_height_chars: &Vec<char>) -> String {
-   todo!();
+fn pick_best_step_char(prior_char: char, next_char: char, half_height_chars: &Vec<char>) -> String {
+    if prior_char == ' ' || prior_char == '\n' {
+	return "🬵".to_string()
+    } else if next_char == ' ' || next_char == '\n' {
+	return "🬱".to_string()
+    };
+    
+    if half_height_chars.contains(&prior_char) && !half_height_chars.contains(&next_char) {
+	return "🬵".to_string()
+    } else if !half_height_chars.contains(&prior_char) && half_height_chars.contains(&next_char) {
+	return "🬱".to_string()
+    } else {
+	eprintln!("Progress - Can't guess which step character to use, going left");
+	return "🬵".to_string()
+    };
 }
