@@ -33,6 +33,8 @@ fn main() {
      exit(0);
    } else if args.contains(&"-g".to_string()) || args.contains(&"--guess".to_string()) {
      todo!();
+   } else if args.len() == 1 {
+       help_menu();
    } else {
      file_path = args[1].clone();
    };
