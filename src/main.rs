@@ -1,7 +1,12 @@
+// Note: Formatting in this file is unreliable as I only installed
+// Rust-mode half way through and Fundamental mode behaved unexpectedly
+// when faced with a rust file
+
 use std::{
     env,
     fs,
     process::exit,
+    io::Write,
 };
 
 fn main() {
@@ -9,18 +14,27 @@ fn main() {
    let mut file_path: String = Default::default();
 
    // Char arrays (If ascii artifacts are present, this is probably the root cause)
-   let solid_chars: Vec<char>  = vec!['M', 'o'];
+   let solid_chars: Vec<char>  = vec!['M', 'o', 's', '+', 'i', 'x', 'k', ';', 'j', 'I'];
+    let half_width_chars: Vec<char> = vec!['/', ':'];
+    let half_height_chars: Vec<char> = vec!['-']; // This is checked in a second pass as the chosen step char is used...
+   let step_chars: Vec<char> = vec![]; // Archive, reason: Lazy
+    let disregarded_chars: Vec<char> = vec![' ', '`', '.', ':', '\''];
 
-   // Check for valid input
-   if args.len() == 1 {
-      help_menu();
-   } if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
+    let combination_half: Vec<char> = vec!['\'', '`', '.', '-', ',']; // Any 2 of these will
+    // be replaced with a half block
+
+    let high_chars: Vec<char> = vec!['\'', '`'];
+    let low_chars: Vec<char> = vec![',', '.']; // Not high_chairs
+
+   if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
      help_menu();
    } else if args.contains(&"-v".to_string()) || args.contains(&"--version".to_string()) {
      println!("Logo-Fancier version: {}", env!("CARGO_PKG_VERSION"));
      exit(0);
    } else if args.contains(&"-g".to_string()) || args.contains(&"--guess".to_string()) {
      todo!();
+   } else if args.len() == 1 {
+       help_menu();
    } else {
      file_path = args[1].clone();
    };
@@ -34,29 +48,200 @@ fn main() {
        },
    };
 
-   println!("{}", ascii_art);
+    println!("{}", ascii_art);
+
+    let mut skip_next_char: bool = false;
 
    let mut error_occurred: bool = false;
+   let mut error_count: u32 = 0;
    let mut block_art: String = "".to_string();
+   let mut index = 0;
 
    for char in ascii_art.chars() {
-       if char == ' ' {
-       	  block_art += " ";
-       } else if solid_chars.contains(&char) {
-       	  block_art += "█";
+       if !skip_next_char {
+	   if char == ' ' {
+	      block_art += " ";
+	   } else if char == '\n' {
+	     block_art += "\n";
+	   } else if char == '$' {
+	      // This is something to do with colour maybe?
+	      skip_next_char = true;
+	   } else if solid_chars.contains(&char) {
+	      block_art += "█";
+	   } else if half_width_chars.contains(&char) {
+
+	     let prior_char: char;
+	     let next_char: char;
+
+	     // Safety checks first
+	     if index == 0 {
+	     	prior_char = ' ';
+	     } else {
+	       	prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	     };
+
+	     if index == ascii_art.len() - 1 {
+	     	next_char = ' ';
+	     } else {
+	       next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	     };
+
+	     block_art += &pick_best_half_char(prior_char, next_char, &disregarded_chars, &combination_half);
+	   } else if step_chars.contains(&char) {
+	       let prior_char: char;
+	       let next_char: char;
+
+	       // Safety checks first
+	       if index == 0 {
+	     	   prior_char = ' ';
+	       } else {
+	       	   prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	       };
+
+	       if index == ascii_art.len() - 1 {
+	     	   next_char = ' ';
+	       } else {
+		   next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	       };
+
+	       block_art += &pick_best_step_char(prior_char, next_char, &half_height_chars);
+	   } else if combination_half.contains(&char) {
+	       let prior_char: char;
+	       let next_char: char;
+
+	       // Safety checks first (consider modularity)
+	       // Considered: Lazy
+	       if index == 0 {
+	     	   prior_char = ' ';
+	       } else {
+	       	   prior_char = ascii_art.chars().nth(index - 1).expect("Already checled for failure point");
+	       };
+
+	       if index == ascii_art.len() - 1 {
+	     	   next_char = ' ';
+	       } else {
+		   next_char = ascii_art.chars().nth(index + 1).expect("Already checked for failure point");
+	       };
+
+	       // Check if the prior_char is a left bounding char
+	       let bounding_char: bool;
+	       if index == 1 {
+		   bounding_char = true;
+	       } else if ascii_art.chars().nth(index - 2).expect("Checked") == ' ' {
+		   bounding_char = true;
+	       } else {
+		   bounding_char = false;
+	       };
+
+	       let run: bool;
+	       if char == '\'' && (prior_char == ' ' || next_char == '\n') {
+		   run = false;
+	       } else {
+		   run = true;
+	       };
+
+	       // Process right here, like a "man" (arch+rust btw)
+	       if (combination_half.contains(&prior_char) || combination_half.contains(&next_char)) && run {
+		   // Definitely add a half char, but which one
+
+		   // Manual hack to get around some weird logic error
+		   let mut cont = true;
+		   if prior_char == '`' && high_chars.contains(&char) && next_char == '.' {
+		       println!("Progress: Hacky workaround triggered...");
+		       block_art += "▀";
+		       cont = false;
+		   };
+
+		   // See definitions of low_chars and high_chars
+		   if cont {
+		       if high_chars.contains(&prior_char) && !bounding_char || high_chars.contains(&next_char) {
+			   block_art += "▀";
+		       } else if low_chars.contains(&prior_char) || low_chars.contains(&next_char) {
+			   block_art += "▄";
+		       } else if high_chars.contains(&char) {
+			   block_art += "▀";
+		       } else if low_chars.contains(&char) {
+			   block_art += "▄";
+		       } else {
+			   // How has this happened???
+			   error_occurred = true;
+			   error_count += 1;
+			   block_art += &char.to_string(); // See after...
+			   eprintln!("Nonfatal - Could not decide which half character to use...");
+		       };
+		   };
+	       } else if low_chars.contains(&char) && (solid_chars.contains(&next_char) || solid_chars.contains(&prior_char)) {
+		   block_art += "▄";
+	       } else if ['`'].contains(&char) && (solid_chars.contains(&next_char) || solid_chars.contains(&prior_char)) {
+		   block_art += "▀";
+	       } else {
+		   error_occurred = true;
+		   error_count += 1;
+		   block_art += &char.to_string(); // See after...
+		   eprintln!("Nonfatal - unexpected char encountered...");
+	       };
+	   } else {
+	     error_occurred = true;
+	     error_count += 1;
+	     block_art += &char.to_string(); // This is not meant to happen, but might result in a more salvagable file
+	     eprintln!("Nonfatal - unexpected char encountered...");
+	   };
        } else {
-       	 error_occurred = true;
-	 block_art += &char.to_string(); // This is not meant to happen, but might result in a more salvagable file
-	 eprintln!("Nonfatal - unexpected char encountered...");
+       	 skip_next_char = false;
        };
+
+       index += 1;
    };
 
    if error_occurred {
-      eprintln!("Nonfatal - an error occured during processing, the result file may be inaccurate.");
+      eprintln!("Nonfatal - {} error(s) occured during processing, the result file may be inaccurate.", error_count);
    };
-   println!("Proccessing complete! Saving not implemented...");
+    println!("Stage one completed! Trimming unexpected characters... (Override with -1");
+    println!("{}", block_art);
 
-   println!("{}", block_art);
+    let mut final_block_art: String = "".to_string();
+    for char in block_art.chars() {
+	if !['▄', '▀', '▐', '▌', '█', '\n'].contains(&char) {
+	    final_block_art += " ";
+	} else {
+	    final_block_art += &char.to_string();
+	};
+    };
+
+    println!("Stage two completed! Trimming last line... (Override with -2)");
+    println!("{}", final_block_art);
+
+    // Split final_block_art, then combine all elements other than the last
+    let block_vector: Vec<&str> = final_block_art.split('\n').collect();
+
+    let mut final_block_art = "".to_string();
+    for i in 0..(block_vector.len() - 1) {
+	final_block_art += block_vector[i];
+	final_block_art += "\n";
+    };
+
+    println!("Stage three completed! Saving at {}.fancy", file_path);
+    println!("{}", final_block_art);
+
+    // Still got to be safe...
+    let mut new_file = match fs::File::create(file_path + ".fancy") {
+	Ok(fi) => fi,
+	Err(e) => {
+	    eprintln!("Fatal - Failed to create file: {}", e);
+	    exit(1);
+	},
+    };
+
+    match new_file.write_all(final_block_art.as_bytes()) {
+	Ok(_) => {
+	    println!("Operation successful!");
+	    exit(0); // Yay uwu
+	},
+	Err(e) => {
+	    println!("Fatal - Failed to save file: {}", e);
+	    exit(1);
+	},
+    };
 }
 
 fn help_menu() {
@@ -70,4 +255,38 @@ Alternative use: Run 'logo-fancier -g', logo-fancier will attempt to guess, base
 ");
 
    exit(0);
+}
+
+fn pick_best_half_char(prior_char: char, next_char: char, disregarded_chars: &Vec<char>, combination_halfs: &Vec<char>) -> String {
+    let mut new_disregarded_chars: Vec<char> = disregarded_chars.to_vec();
+    new_disregarded_chars.push('-');
+    
+    if next_char == ':' || prior_char == ':' || combination_halfs.contains(&next_char) || combination_halfs.contains(&prior_char) { // This ends up looking better
+	return "█".to_string()
+    };
+	
+   if new_disregarded_chars.contains(&prior_char) && !new_disregarded_chars.contains(&next_char) {
+      return "▐".to_string()
+   } else if !new_disregarded_chars.contains(&prior_char) && new_disregarded_chars.contains(&next_char) {
+     return "▌".to_string()
+   } else { // This looks best imo
+     return "█".to_string()
+   };
+}
+
+fn pick_best_step_char(prior_char: char, next_char: char, half_height_chars: &Vec<char>) -> String {
+    if prior_char == ' ' || prior_char == '\n' {
+	return "🬵".to_string()
+    } else if next_char == ' ' || next_char == '\n' {
+	return "🬱".to_string()
+    };
+    
+    if half_height_chars.contains(&prior_char) && !half_height_chars.contains(&next_char) {
+	return "🬵".to_string()
+    } else if !half_height_chars.contains(&prior_char) && half_height_chars.contains(&next_char) {
+	return "🬱".to_string()
+    } else {
+	eprintln!("Progress - Can't guess which step character to use, going left");
+	return "🬵".to_string()
+    };
 }
