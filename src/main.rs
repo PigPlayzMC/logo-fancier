@@ -6,6 +6,7 @@ use std::{
     env,
     fs,
     process::exit,
+    io::Write,
 };
 
 fn main() {
@@ -171,6 +172,10 @@ fn main() {
 			   eprintln!("Nonfatal - Could not decide which half character to use...");
 		       };
 		   };
+	       } else if low_chars.contains(&char) && (solid_chars.contains(&next_char) || solid_chars.contains(&prior_char)) {
+		   block_art += "▄";
+	       } else if ['`'].contains(&char) && (solid_chars.contains(&next_char) || solid_chars.contains(&prior_char)) {
+		   block_art += "▀";
 	       } else {
 		   error_occurred = true;
 		   error_count += 1;
@@ -193,9 +198,52 @@ fn main() {
    if error_occurred {
       eprintln!("Nonfatal - {} error(s) occured during processing, the result file may be inaccurate.", error_count);
    };
-   println!("Processing complete! Saving not implemented...");
+    println!("Stage one completed! Trimming unexpected characters... (Override with -1");
+    println!("{}", block_art);
 
-   println!("{}", block_art);
+    let mut final_block_art: String = "".to_string();
+    for char in block_art.chars() {
+	if !['▄', '▀', '▐', '▌', '█', '\n'].contains(&char) {
+	    final_block_art += " ";
+	} else {
+	    final_block_art += &char.to_string();
+	};
+    };
+
+    println!("Stage two completed! Trimming last line... (Override with -2)");
+    println!("{}", final_block_art);
+
+    // Split final_block_art, then combine all elements other than the last
+    let block_vector: Vec<&str> = final_block_art.split('\n').collect();
+
+    let mut final_block_art = "".to_string();
+    for i in 0..(block_vector.len() - 1) {
+	final_block_art += block_vector[i];
+	final_block_art += "\n";
+    };
+
+    println!("Stage three completed! Saving at {}.fancy", file_path);
+    println!("{}", final_block_art);
+
+    // Still got to be safe...
+    let mut new_file = match fs::File::create(file_path + ".fancy") {
+	Ok(fi) => fi,
+	Err(e) => {
+	    eprintln!("Fatal - Failed to create file: {}", e);
+	    exit(1);
+	},
+    };
+
+    match new_file.write_all(final_block_art.as_bytes()) {
+	Ok(_) => {
+	    println!("Operation successful!");
+	    exit(0); // Yay uwu
+	},
+	Err(e) => {
+	    println!("Fatal - Failed to save file: {}", e);
+	    exit(1);
+	},
+    };
 }
 
 fn help_menu() {
